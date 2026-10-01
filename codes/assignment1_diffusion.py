@@ -83,16 +83,16 @@ class Diffusion:
             steps = self.steps
         denoiser.eval()
         x = torch.randn(count, 1, 32, 32, device=DEVICE)
-        for step in reversed(range(steps)):
-            t = torch.full((count,), step, device=DEVICE, dtype=torch.long)
+        schedule = torch.linspace(self.steps - 1, 0, steps, device=DEVICE).round().long()
+        for index, timestep in enumerate(schedule):
+            t = torch.full((count,), timestep.item(), device=DEVICE, dtype=torch.long)
             with torch.no_grad():
                 pred = denoiser(x, t)
-            if step > 0:
-                beta = self.betas[step - 1].to(DEVICE)
-                alpha = self.alphas[step - 1].to(DEVICE)
-                alpha_bar = self.alpha_bars[step - 1].to(DEVICE)
-                x = x - (beta / torch.sqrt(1.0 - alpha_bar)) * pred
-                x = x / torch.sqrt(alpha)
+            alpha_bar_t = self.alpha_bars[timestep]
+            previous_timestep = schedule[index + 1] if index + 1 < len(schedule) else None
+            alpha_bar_previous = torch.tensor(1.0, device=DEVICE) if previous_timestep is None else self.alpha_bars[previous_timestep]
+            predicted_clean = (x - torch.sqrt(1.0 - alpha_bar_t) * pred) / torch.sqrt(alpha_bar_t)
+            x = torch.sqrt(alpha_bar_previous) * predicted_clean + torch.sqrt(1.0 - alpha_bar_previous) * pred
         return x.clamp(-1, 1)
 
 

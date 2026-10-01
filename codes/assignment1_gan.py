@@ -48,7 +48,7 @@ class Discriminator(nn.Module):
         return self.net(x).view(x.size(0), -1)
 
 
-def train_gan(generator, discriminator):
+def train_gan(generator, discriminator, checkpoint_callback=None):
     g_opt = torch.optim.Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     d_opt = torch.optim.Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     history = []
@@ -86,6 +86,8 @@ def train_gan(generator, discriminator):
             g_loss_total += g_loss.item()
             d_loss_total += d_loss.item()
         history.append({"epoch": epoch + 1, "g_loss": g_loss_total / len(train_loader), "d_loss": d_loss_total / len(train_loader)})
+        if checkpoint_callback is not None:
+            checkpoint_callback(epoch + 1, generator)
     return generator, discriminator, history, __import__("time").perf_counter() - started
 
 

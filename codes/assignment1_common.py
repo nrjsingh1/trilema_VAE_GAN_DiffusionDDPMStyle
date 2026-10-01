@@ -199,6 +199,11 @@ def predicted_histogram(images, evaluator):
     return hist / hist.sum()
 
 
+def synchronize_cuda():
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+
 def train_evaluator(model):
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-3)
     history = []
@@ -224,8 +229,10 @@ def train_evaluator(model):
 
 def evaluate_model(name, sample_fn, evaluator, training_seconds=None, parameters=None):
     count = CONFIG["metric_count"]
+    synchronize_cuda()
     started = time.perf_counter()
     generated = sample_fn(count)
+    synchronize_cuda()
     elapsed = time.perf_counter() - started
     labels, features = evaluator_outputs(generated, evaluator)
     real_features, real_labels = reference_features(count, evaluator)
